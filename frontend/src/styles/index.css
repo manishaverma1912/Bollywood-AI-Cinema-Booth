@@ -1,0 +1,102 @@
+@import "tailwindcss";
+@import './theme.css';
+
+@theme {
+  --font-display: "Playfair Display", serif;
+  --font-body: "Hanken Grotesk", sans-serif;
+
+  --color-obsidian: #0b0c10;
+  --color-obsidian-light: #1f2833;
+  --color-gold: #f2ca50;
+  --color-gold-light: #fbe698;
+  --color-red: #e10111;
+  --color-red-dark: #990000;
+  --color-glass: rgba(255, 255, 255, 0.03);
+  --color-glass-hover: rgba(255, 255, 255, 0.08);
+
+  --color-world-bollywood: #ff4500;
+  --color-world-hollywood: #f2ca50;
+  --color-world-tollywood: #ff8c00;
+  --color-world-kdrama: #ff69b4;
+  --color-world-anime: #1e90ff;
+  --color-world-business: #4682b4;
+  --color-world-student: #32cd32;
+  --color-world-future: #8a2be2;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-obsidian);
+    color: white;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-obsidian);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-obsidian-light);
+    border-radius: 3px;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: var(--color-glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    background: var(--color-glass-hover);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-4px);
+  }
+
+  .cinematic-glow {
+    box-shadow: 0 0 40px rgba(242, 202, 80, 0.15);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+
+  .gold-gradient-text {
+    background: linear-gradient(135deg, #fbe698 0%, #f2ca50 50%, #c49a00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
