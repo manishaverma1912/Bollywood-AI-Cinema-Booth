@@ -55,10 +55,13 @@ export default function Processing() {
       formData.append("source_image", selfieBlob, "selfie.jpg");
       formData.append("target_image", templateBlob, "template.jpg");
 
-      const response = await fetch("http://127.0.0.1:8002/swap", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "https://bollywood-ai-cinema-booth.onrender.com/swap",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (!response.ok) throw new Error("Processing failed");
 
