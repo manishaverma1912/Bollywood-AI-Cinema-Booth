@@ -1,9 +1,29 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { uploadToS3 } from "../utils/s3Upload";
+
 import TopAppBar from "../components/TopAppBar";
 import BottomNav from "../components/BottomNav";
 import { QRCodeCanvas } from "qrcode.react";
+
+const mergeImages = (src1, src2) => {
+  return new Promise((resolve) => {
+    const img1 = new Image();
+    const img2 = new Image();
+    img1.onload = () => {
+      img2.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img1.width + img2.width;
+        canvas.height = Math.max(img1.height, img2.height);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img1, 0, 0);
+        ctx.drawImage(img2, img1.width, 0);
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
+      };
+      img2.src = src2;
+    };
+    img1.src = src1;
+  });
+};
 
 export default function SelfieCapture() {
   const navigate = useNavigate();
@@ -11,6 +31,9 @@ export default function SelfieCapture() {
   const canvasRef = useRef(null);
 
   const [stream, setStream] = useState(null);
+  const captureMode = sessionStorage.getItem("captureMode") || "single";
+  const [captureStep, setCaptureStep] = useState(captureMode === "duo" ? "female" : "single");
+  const [femaleImage, setFemaleImage] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [facingMode, setFacingMode] = useState("user");
   const [cameraAvailable, setCameraAvailable] = useState(true);
@@ -49,22 +72,27 @@ export default function SelfieCapture() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode]);
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return null;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    
+    // Crop to the center square where the golden ring is
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    const startX = (video.videoWidth - size) / 2;
+    const startY = (video.videoHeight - size) / 2;
+    
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext("2d");
     if (facingMode === "user") {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-    setCapturedImage(dataUrl);
-    sessionStorage.setItem("capturedSelfie", dataUrl);
     
+    setCapturedImage(dataUrl);
     if (stream) stream.getTracks().forEach((t) => t.stop());
     return dataUrl;
   };
@@ -75,11 +103,25 @@ export default function SelfieCapture() {
     startCamera();
   };
 
-  const handleGenerate = async () => {
+  const handleProceedClick = async () => {
+    if (captureStep === "female") {
+      setFemaleImage(capturedImage);
+      setCapturedImage(null);
+      setCaptureStep("male");
+      startCamera();
+    } else if (captureStep === "male") {
+      sessionStorage.setItem("capturedSelfieFemale", femaleImage);
+      sessionStorage.setItem("capturedSelfieMale", capturedImage);
+      handleGenerate(femaleImage, capturedImage);
+    } else {
+      sessionStorage.setItem("capturedSelfie", capturedImage);
+      handleGenerate(capturedImage);
+    }
+  };
+
+  const handleGenerate = async (img1, img2 = null) => {
     if (isProcessing) return;
-    
-    let selfieData = capturedImage;
-    if (!selfieData) return;
+    if (!img1) return;
 
     setIsProcessing(true);
     setProcessingError("");
@@ -104,14 +146,22 @@ export default function SelfieCapture() {
       // Here we simulate the fetch logic similar to Processing.jsx
       
       // Converting base64 to blob
-      const selfieBlob = await fetch(selfieData).then(r => r.blob());
+      const blob1 = await fetch(img1).then(r => r.blob());
       const templateBlob = await fetch(template.image).then(r => r.blob());
-      
-      const formData = new FormData();
-      formData.append("source_image", selfieBlob, "selfie.jpg");
-      formData.append("target_image", templateBlob, "template.jpg");
 
-      const response = await fetch("http://127.0.0.1:8002/swap", {
+      const formData = new FormData();
+      formData.append("target_image", templateBlob, "target.jpg");
+      
+      if (captureMode === "duo" && img2) {
+        const blob2 = await fetch(img2).then(r => r.blob());
+        formData.append("source_image_female", blob1, "female.jpg");
+        formData.append("source_image_male", blob2, "male.jpg");
+      } else {
+        formData.append("source_image", blob1, "source.jpg");
+      }
+
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
+      const response = await fetch(`${apiUrl}/swap`, {
         method: "POST",
         body: formData,
       });
@@ -122,8 +172,8 @@ export default function SelfieCapture() {
         throw new Error(errMsg);
       }
 
-      const resultBlob = await response.blob();
-      const s3ImageUrl = await uploadToS3(resultBlob);
+      const json = await response.json();
+      const s3ImageUrl = json.s3_url;
       sessionStorage.setItem("finalImageUrl", s3ImageUrl);
       
       clearInterval(progressInterval);
@@ -244,12 +294,19 @@ export default function SelfieCapture() {
 
           <div className="text-center space-y-2 relative">
             <h2 className="text-white text-3xl font-display font-semibold">
-              {finalImageUrl ? "Your Masterpiece" : "Capture Face"}
+              {finalImageUrl ? "Your Masterpiece" : (
+                 captureStep === "female" ? "Capture Female Face" :
+                 captureStep === "male" ? "Capture Male Face" : "Capture Face"
+              )}
             </h2>
             <p className="text-white/70 max-w-xs mx-auto text-sm">
               {finalImageUrl 
                 ? "Your face perfectly synced with the Bollywood aesthetic!" 
-                : "Position your face within the golden ring to sync with the AI Director."}
+                : (
+                 captureStep === "female" ? "Position the female face within the golden ring." :
+                 captureStep === "male" ? "Position the male face within the golden ring." :
+                 "Position your face within the golden ring to sync with the AI Director."
+                )}
             </p>
             {/* Flip camera button */}
             {!capturedImage && !finalImageUrl && (
@@ -386,10 +443,10 @@ export default function SelfieCapture() {
                       <span className="material-symbols-outlined text-[18px]">replay</span> RETAKE
                     </button>
                     <button
-                      onClick={handleGenerate}
+                      onClick={handleProceedClick}
                       className="flex-[1.5] py-4 bg-[var(--color-gold)] text-[var(--color-navy)] font-bold text-sm tracking-widest uppercase rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[var(--color-gold)]/20 flex items-center justify-center gap-2"
                     >
-                      PROCEED <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                      {captureStep === "female" ? "PROCEED TO MALE" : "PROCEED"} <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                     </button>
                   </div>
                 ) : (
@@ -397,7 +454,7 @@ export default function SelfieCapture() {
                     onClick={capturePhoto}
                     className="w-full py-4 bg-[var(--color-gold)] text-[var(--color-navy)] font-bold text-sm tracking-widest uppercase rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[var(--color-gold)]/20 flex items-center justify-center gap-2"
                   >
-                    CAPTURE PHOTO <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                    {captureStep === "female" ? "CAPTURE FEMALE" : captureStep === "male" ? "CAPTURE MALE" : "CAPTURE PHOTO"} <span className="material-symbols-outlined text-[18px]">photo_camera</span>
                   </button>
                 )}
                 <div className="text-center">

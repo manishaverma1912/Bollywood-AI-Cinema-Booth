@@ -233,6 +233,38 @@ const styles = `
     0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(225,1,17,0.8); }
     50% { opacity: 0.8; box-shadow: 0 0 5px rgba(225,1,17,0.2); }
   }
+
+  .poster-wrapper .mode-selector {
+    display: flex;
+    gap: 8px;
+    background: rgba(255,255,255,0.05);
+    padding: 6px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-top: 16px;
+    width: fit-content;
+  }
+  
+  .poster-wrapper .mode-btn {
+    padding: 8px 24px;
+    border-radius: 9999px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #a09a8f;
+    transition: all 0.3s ease;
+  }
+  
+  .poster-wrapper .mode-btn.active {
+    background: #f2ca50;
+    color: #1a1a1a;
+    box-shadow: 0 0 15px rgba(242,202,80,0.3);
+  }
 `;
 
 export default function PosterGallery() {
@@ -244,6 +276,12 @@ export default function PosterGallery() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [ringId, setRingId] = useState(null);
+  const [captureMode, setCaptureMode] = useState(sessionStorage.getItem("captureMode") || "single");
+
+  // Save mode to session storage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem("captureMode", captureMode);
+  }, [captureMode]);
 
   // Atmospheric parallax on mouse move
   useEffect(() => {
@@ -322,6 +360,23 @@ export default function PosterGallery() {
         <section className="hero-section">
           <h2 className="hero-title">Choose Your Movie</h2>
           <p className="hero-sub">Poster Options - {category.name}</p>
+          
+          <div className="mode-selector">
+            <button 
+              className={`mode-btn ${captureMode === 'single' ? 'active' : ''}`}
+              onClick={() => setCaptureMode('single')}
+            >
+              <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px', fontSize: '18px' }}>person</span>
+              Single
+            </button>
+            <button 
+              className={`mode-btn ${captureMode === 'duo' ? 'active' : ''}`}
+              onClick={() => setCaptureMode('duo')}
+            >
+              <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px', fontSize: '18px' }}>group</span>
+              Duo
+            </button>
+          </div>
         </section>
 
         <div className="poster-grid">

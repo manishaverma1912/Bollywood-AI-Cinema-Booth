@@ -490,7 +490,7 @@ const specificPosters = {
       categoryId: "action-hero",
       name: "KGF Warrior",
       description: "Gold mines, unstoppable legend",
-      image: "/images/bollywoood/action/kgf.jpg"
+      image: "/images/bollywoood/action/Lagan.jpg"
     }
   ],
 
@@ -502,7 +502,7 @@ const specificPosters = {
       categoryId: "romantic-hero",
       name: "Jab We Met",
       description: "Vibrant train journey, heart full of hope",
-      image: "/images/bollywood/romantic/jab-we-met.jpg"
+      image: "/images/bollywoood/romantic/jab-we-met.jpg"
     },
     {
       id: "bollywood-romantic-hero-rab-ne",
@@ -510,7 +510,7 @@ const specificPosters = {
       categoryId: "romantic-hero",
       name: "Rab Ne Bana Di Jodi",
       description: "Simple man, deep love story",
-      image: "/images/bollywood/romantic/rab-ne.jpg"
+      image: "/images/bollywoood/romantic/jab-ne-bana-di-jodi.png"
     },
     {
       id: "bollywood-romantic-hero-rockstar",

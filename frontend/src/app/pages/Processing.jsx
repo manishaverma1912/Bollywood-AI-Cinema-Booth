@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { uploadToS3 } from "../utils/s3Upload";
+
 
 const generateStars = (n) =>
   Array.from({ length: n }, (_, i) => ({
@@ -55,18 +55,22 @@ export default function Processing() {
       formData.append("source_image", selfieBlob, "selfie.jpg");
       formData.append("target_image", templateBlob, "template.jpg");
 
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8001";
       const response = await fetch(
-        "https://bollywood-ai-cinema-booth.onrender.com/swap",
+        `${apiUrl}/swap`,
         {
           method: "POST",
           body: formData,
         }
       );
 
-      if (!response.ok) throw new Error("Processing failed");
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Processing failed: ${errText}`);
+      }
 
-      const resultBlob = await response.blob();
-      const s3ImageUrl = await uploadToS3(resultBlob);
+      const json = await response.json();
+      const s3ImageUrl = json.s3_url;
       sessionStorage.setItem("finalImageUrl", s3ImageUrl);
       navigate("/download");
     } catch (err) {
